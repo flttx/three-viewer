@@ -26,6 +26,7 @@ import {
 import EmbeddedHeader from "./UI/EmbeddedHeader";
 import ModelInfoCard from "./UI/ModelInfoCard";
 import ModelGallery from "./UI/ModelGallery";
+import OnboardingOverlay from "./UI/OnboardingOverlay";
 import StandaloneHeader from "./UI/StandaloneHeader";
 import Toolbar from "./UI/Toolbar";
 import Controls from "./Viewer/Controls";
@@ -121,19 +122,19 @@ const ClientWrapper = () => {
     };
   }, [urlParam]);
 
-  const cachedModel = useMemo<ModelDescriptor | null>(() => {
-    if (typeof window === "undefined") return null;
+  const [cachedModel, setCachedModel] = useState<ModelDescriptor | null>(null);
+
+  useEffect(() => {
     const cached = localStorage.getItem(STORAGE_KEYS.lastModel);
-    if (!cached) return null;
+    if (!cached) return;
     try {
       const parsed = JSON.parse(cached) as ModelDescriptor;
       if (parsed.url && !parsed.url.startsWith("blob:")) {
-        return parsed;
+        setCachedModel(parsed);
       }
     } catch {
-      return null;
+      // ignore error
     }
-    return null;
   }, []);
 
   const setModel = useCallback(
@@ -527,123 +528,76 @@ const ClientWrapper = () => {
   }, []);
 
   const showChrome = mode === "standalone";
-  const modeLabel = mode === "embedded" ? "嵌入" : "独立";
+  const [showSidebar, setShowSidebar] = useState(false);
+
+  // Toggle sidebar for gallery/info
+  const toggleSidebar = useCallback(() => setShowSidebar(prev => !prev), []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-white text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      {showChrome && (
-        <StandaloneHeader theme={theme} onToggleTheme={handleToggleTheme} />
-      )}
-      <main className="mx-auto flex max-w-7xl flex-col gap-4 px-6 pb-10 pt-6">
-        <EmbeddedHeader mode={mode} />
-        <div
-          className={`grid gap-4 ${showChrome ? "lg:grid-cols-[320px_1fr]" : ""}`}
-        >
-          {showChrome && (
-            <aside className="space-y-4 lg:sticky lg:top-6">
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  运行与通信
-                </h3>
-                <div className="mt-3 grid gap-3 text-xs text-slate-600 dark:text-slate-300">
-                  <div>
-                    <p className="text-[11px] font-semibold text-slate-400">
-                      运行环境
-                    </p>
-                    <ul className="mt-2 space-y-1">
-                      <li>模式：{modeLabel}</li>
-                      <li>主题：{theme === "dark" ? "深色" : "浅色"}</li>
-                      <li>allowedOrigins：{allowedOriginsLabel}</li>
-                    </ul>
+    <div className="relative h-screen w-full overflow-hidden bg-white dark:bg-black text-slate-900 dark:text-slate-100">
+
+      {/* 1. Immersive 3D Scene Background */}
+      <div className="absolute inset-0 z-0">
+        <Scene>
+          <ViewerCanvas
+            ref={viewerRef}
+            theme={theme}
+            quality={resolvedQuality}
+            model={model}
+            playAnimations={animationPlaying}
+            activeAnimationIndex={activeAnimationIndex}
+            animationLoop={animationLoop}
+            animationSpeed={animationSpeed}
+            onLoaded={handleModelLoaded}
+            onError={handleLoadError}
+            onStats={handleStats}
+            onAnimationList={handleAnimationList}
+            onExported={handleExported}
+            onLoadingState={handleLoadingState}
+          />
+        </Scene>
+      </div>
+
+      {/* 2. Floating UI Layer */}
+      <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4 sm:p-6">
+
+        {/* Top Bar: Brand & Stats */}
+        <header className="pointer-events-auto flex items-start justify-between animate-slide-down">
+          <div className={`glass rounded-full py-2 px-4 transition-all duration-300 ${showChrome ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <h1 className="text-sm font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">SceneHub</h1>
+              </div>
+              {loadingProgress < 100 && (
+                <>
+                  <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-700" />
+                  <div className="flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400">
+                    <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{loadingProgress}%</span>
                   </div>
-                  <div>
-                    <p className="text-[11px] font-semibold text-slate-400">
-                      消息流
-                    </p>
-                    <ul className="mt-2 space-y-1">
-                      <li>URL：model / theme / embedded</li>
-                      <li>父页：load_model / set_theme / export_requested</li>
-                      <li>回传：model_loaded / export_complete / error</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    示例模型
-                  </h3>
-                  <span className="text-[11px] text-slate-400">
-                    {filteredSamples.length} 个
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={clearTags}
-                    className={`rounded-full border px-2 py-0.5 font-medium transition ${
-                      activeTags.length === 0
-                        ? "border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-100"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
-                    }`}
-                  >
-                    全部
-                  </button>
-                  {availableTags.map((tag) => {
-                    const isActive = activeTags.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => toggleTag(tag)}
-                        className={`rounded-full border px-2 py-0.5 font-medium transition ${
-                          isActive
-                            ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-100"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
-                        }`}
-                      >
-                        {tag}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3">
-                  <ModelGallery
-                    items={filteredSamples}
-                    activeUrl={model?.url}
-                    layout="row"
-                    onSelect={handleSelectSample}
-                  />
-                </div>
-                <div className="mt-3">
-                  <ModelInfoCard
-                    sample={activeSample}
-                    model={model}
-                    stats={modelStats}
-                    errorMessage={errorMessage}
-                    variant="compact"
-                  />
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  最新事件
-                </h3>
-                <div className="mt-2 max-h-32 space-y-2 overflow-y-auto text-xs text-slate-600 dark:text-slate-200">
-                  {events.length === 0 && <p>暂无事件</p>}
-                  {events.map((item, index) => (
-                    <p
-                      key={`${item}-${index}`}
-                      className="rounded-lg bg-slate-100 px-3 py-1.5 dark:bg-slate-800/70"
-                    >
-                      {item}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            </aside>
-          )}
-          <section className="flex min-h-[520px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-xl backdrop-blur dark:border-slate-800 dark:bg-slate-900/70 lg:min-h-[calc(100vh-220px)]">
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Sidebar Toggle & Quick Actions */}
+          <div className="flex gap-2 pointer-events-auto">
+            <button
+              onClick={toggleSidebar}
+              className="glass h-10 w-10 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 transition-all duration-300 shadow-sm hover:shadow-md"
+              title="Model Gallery & Info"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
+            </button>
+          </div>
+        </header>
+
+        {/* Center/Bottom: Controls Overlay (If any specific 3D controls need to be center) */}
+        <div className="pointer-events-auto self-center mb-4 lg:mb-8 animate-slide-up w-auto max-w-[90vw]">
+          <div className="glass rounded-full p-1.5 shadow-2xl backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10 transition-all duration-300 hover:shadow-3xl hover:bg-[var(--panel)]/90">
             <Toolbar
               mode={mode}
               theme={theme}
@@ -654,11 +608,11 @@ const ClientWrapper = () => {
               animationPlaying={animationPlaying}
               animationClips={animationClips}
               activeAnimationIndex={activeAnimationIndex}
-                animationLoop={animationLoop}
-                animationSpeed={animationSpeed}
-                onLoadSample={handleLoadSample}
-                onImportFiles={handleImportFiles}
-                onExport={handleExport}
+              animationLoop={animationLoop}
+              animationSpeed={animationSpeed}
+              onLoadSample={handleLoadSample}
+              onImportFiles={handleImportFiles}
+              onExport={handleExport}
               onToggleTheme={handleToggleTheme}
               onQualityChange={handleQualityChange}
               onToggleAnimation={handleToggleAnimation}
@@ -666,98 +620,73 @@ const ClientWrapper = () => {
               onAnimationLoopChange={handleAnimationLoopChange}
               onAnimationSpeedChange={handleAnimationSpeedChange}
             />
-            {!showChrome && (
-              <div className="border-b border-slate-200/80 bg-white/70 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
-                <div className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-300">
-                  示例模型
-                </div>
-                <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-                  <button
-                    type="button"
-                    onClick={clearTags}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                      activeTags.length === 0
-                        ? "border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-100"
-                        : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
-                    }`}
-                  >
-                    全部
-                  </button>
-                  {availableTags.map((tag) => {
-                    const isActive = activeTags.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => toggleTag(tag)}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                          isActive
-                            ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-100"
-                            : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
-                        }`}
-                      >
-                        {tag}
-                      </button>
-                    );
-                  })}
-                </div>
-                <ModelGallery
-                  items={filteredSamples}
-                  activeUrl={model?.url}
-                  layout="row"
-                  onSelect={handleSelectSample}
-                />
-                <div className="mt-4">
-                  <ModelInfoCard
-                    sample={activeSample}
-                    model={model}
-                    stats={modelStats}
-                    errorMessage={errorMessage}
-                    variant="compact"
-                  />
-                </div>
-              </div>
-            )}
-            <Scene>
-              <ViewerCanvas
-                ref={viewerRef}
-                theme={theme}
-                quality={resolvedQuality}
-                model={model}
-                playAnimations={animationPlaying}
-                activeAnimationIndex={activeAnimationIndex}
-                animationLoop={animationLoop}
-                animationSpeed={animationSpeed}
-                onLoaded={handleModelLoaded}
-                onError={handleLoadError}
-                onStats={handleStats}
-                onAnimationList={handleAnimationList}
-                onExported={handleExported}
-                onLoadingState={handleLoadingState}
-              />
-              <div className="px-6 py-4 text-sm text-slate-100 lg:absolute lg:bottom-4 lg:left-4 lg:w-[320px] lg:rounded-2xl lg:bg-slate-900/50 lg:p-4 lg:shadow-lg lg:backdrop-blur">
-                <p className="font-semibold">
-                  {model?.name || "示例模型"} 状态
-                </p>
-                <p className="mt-1 text-xs text-slate-200">
-                  加载进度：{loadingProgress}%
-                  {errorMessage && (
-                    <span className="ml-2 text-rose-200">
-                      错误：{errorMessage}
-                    </span>
-                  )}
-                </p>
-                <Controls />
-              </div>
-            </Scene>
-          </section>
+          </div>
         </div>
-        {showChrome && (
-          <footer className="mt-6 text-xs text-slate-500 dark:text-slate-400">
-            SceneHub 3D Viewer • 支持独立访问与 iframe 嵌入，已接入 Three.js 渲染、材质编辑与导入导出链路。
-          </footer>
-        )}
-      </main>
+      </div>
+
+      {/* 3. Slide-over Sidebar (Gallery & Info) */}
+      <div className={`absolute top-0 right-0 h-full w-full sm:w-[360px] bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl shadow-2xl z-20 transform transition-transform duration-300 ease-spring ${showSidebar ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="flex flex-col h-full border-l border-black/5 dark:border-white/5">
+          <div className="flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
+            <h2 className="font-semibold">Library & Inspector</h2>
+            <button onClick={toggleSidebar} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Model Info Section */}
+            <section>
+              <ModelInfoCard
+                sample={activeSample}
+                model={model}
+                stats={modelStats}
+                errorMessage={errorMessage}
+                variant="compact"
+              />
+            </section>
+
+            <hr className="border-black/5 dark:border-white/5" />
+
+            {/* Gallery Section */}
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-slate-500">Sample Models</h3>
+                <div className="flex gap-1">
+                  <button
+                    onClick={clearTags}
+                    className={`text-[10px] px-2 py-1 rounded-full border transition ${activeTags.length === 0 ? 'bg-slate-800 text-white border-transparent' : 'bg-transparent border-slate-200 text-slate-500'}`}
+                  >
+                    All
+                  </button>
+                  {/* Only show first few tags to save space or implement specialized tag selector if needed */}
+                </div>
+              </div>
+              <ModelGallery
+                items={filteredSamples}
+                activeUrl={model?.url}
+                layout="grid"
+                onSelect={(item) => {
+                  handleSelectSample(item);
+                  if (window.innerWidth < 1024) setShowSidebar(false); // Auto close on mobile
+                }}
+              />
+            </section>
+
+            {/* Events / Debug Log (keep it but folded or smaller) */}
+            <section className="pt-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">System Events</h3>
+              <div className="bg-slate-50 dark:bg-black/20 rounded-lg p-2 font-mono text-[10px] text-slate-500 max-h-24 overflow-y-auto">
+                {events.length === 0 && <span className="opacity-50">No events logged</span>}
+                {events.map((e, i) => (
+                  <div key={i} className="mb-1 border-b border-black/5 last:border-0 pb-1 last:pb-0">{e}</div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 };

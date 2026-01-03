@@ -129,20 +129,22 @@ const ModelInfoCard = ({
 
   return (
     <div
-      className={`rounded-2xl border border-slate-200 bg-white/80 ${
-        isCompact ? "px-4 py-3" : "p-4"
-      } shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60`}
+      className={
+        isCompact
+          ? "w-full"
+          : "rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60"
+      }
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100" suppressHydrationWarning>
             {title}
           </h3>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-300" suppressHydrationWarning>
             {summary}
           </p>
         </div>
-        <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+        <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200" suppressHydrationWarning>
           {formatLabel}
         </span>
       </div>
@@ -161,14 +163,16 @@ const ModelInfoCard = ({
       )}
 
       <div
-        className={`mt-4 grid ${
-          isCompact ? "grid-cols-2 gap-3" : "grid-cols-3 gap-3"
-        }`}
+        className={`mt-4 grid ${isCompact ? "grid-cols-2 gap-2" : "grid-cols-3 gap-3"
+          }`}
       >
         {items.map((item) => (
           <div
             key={item.label}
-            className="rounded-xl bg-slate-100/70 px-3 py-2 text-xs text-slate-600 dark:bg-slate-800/70 dark:text-slate-200"
+            className={`rounded-xl px-3 py-2 text-xs text-slate-600 dark:text-slate-200 ${isCompact
+              ? "bg-black/5 dark:bg-white/5"
+              : "bg-slate-100/70 dark:bg-slate-800/70"
+              }`}
           >
             <div className="text-[11px] text-slate-400 dark:text-slate-400">
               {item.label}
