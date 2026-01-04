@@ -54,13 +54,23 @@ const ModelGallery = ({
               }`}
           >
             <span className="relative block aspect-[4/3] w-full overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 shadow-inner">
-              <Image
-                src={item.thumbnail}
-                alt={`${item.name} 缩略图`}
-                fill
-                sizes={imageSizes}
-                className="object-cover transition duration-500 group-hover:scale-110"
-              />
+              {(() => {
+                const isGif = item.thumbnail.toLowerCase().endsWith(".gif");
+                const isBlob = item.thumbnail.startsWith("blob:");
+                const shouldBeUnoptimized = isGif || isBlob;
+
+                return (
+                  <Image
+                    src={item.thumbnail}
+                    alt={`${item.name} 缩略图`}
+                    fill
+                    sizes={shouldBeUnoptimized ? undefined : imageSizes}
+                    className="object-cover transition duration-500 group-hover:scale-110"
+                    unoptimized={shouldBeUnoptimized}
+                    suppressHydrationWarning
+                  />
+                );
+              })()}
               {/* Active Indicator Overlay */}
               {isActive && (
                 <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-400/10 pointer-events-none" />
@@ -76,13 +86,23 @@ const ModelGallery = ({
             >
               <span className="block overflow-hidden rounded-xl border border-slate-200/50 bg-white/95 shadow-xl backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-900/95">
                 <span className="relative block aspect-[4/3] w-full bg-slate-100 dark:bg-slate-800">
-                  <Image
-                    src={item.thumbnail}
-                    alt={`${item.name} 预览`}
-                    fill
-                    sizes={previewSizes}
-                    className="object-cover"
-                  />
+                  {(() => {
+                    const isGif = item.thumbnail.toLowerCase().endsWith(".gif");
+                    const isBlob = item.thumbnail.startsWith("blob:");
+                    const shouldBeUnoptimized = isGif || isBlob;
+
+                    return (
+                      <Image
+                        src={item.thumbnail}
+                        alt={`${item.name} 预览`}
+                        fill
+                        sizes={shouldBeUnoptimized ? undefined : previewSizes}
+                        className="object-cover"
+                        unoptimized={shouldBeUnoptimized}
+                        suppressHydrationWarning
+                      />
+                    );
+                  })()}
                 </span>
                 <span className="block space-y-2 px-3 py-2 text-xs text-slate-600 dark:text-slate-200">
                   <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">

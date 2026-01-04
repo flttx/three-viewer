@@ -27,7 +27,8 @@ import EmbeddedHeader from "./UI/EmbeddedHeader";
 import ModelInfoCard from "./UI/ModelInfoCard";
 import ModelGallery from "./UI/ModelGallery";
 import OnboardingOverlay from "./UI/OnboardingOverlay";
-import StandaloneHeader from "./UI/StandaloneHeader";
+import MaterialInspector from "./UI/MaterialInspector";
+import { MaterialInfo } from "@/lib/materialUtils";
 import Toolbar from "./UI/Toolbar";
 import Controls from "./Viewer/Controls";
 import Scene from "./Viewer/Scene";
@@ -88,6 +89,8 @@ const ClientWrapper = () => {
   const [animationSpeed, setAnimationSpeed] = useState(1);
   const viewerRef = useRef<ViewerCanvasHandle | null>(null);
   const localUrlsRef = useRef<string[]>([]);
+  const [materialInspectorOpen, setMaterialInspectorOpen] = useState(false);
+  const [materials, setMaterials] = useState<MaterialInfo[]>([]);
 
   const allowedOriginsLabel = useMemo(
     () => DEFAULT_ALLOWED_ORIGINS.join(", ") || "*",
@@ -129,11 +132,14 @@ const ClientWrapper = () => {
     if (!cached) return;
     try {
       const parsed = JSON.parse(cached) as ModelDescriptor;
-      if (parsed.url && !parsed.url.startsWith("blob:")) {
+      // Safety: Never restore models that used blob URLs or local file maps
+      if (parsed.url && !parsed.url.startsWith("blob:") && !parsed.fileMap) {
         setCachedModel(parsed);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.lastModel);
       }
     } catch {
-      // ignore error
+      localStorage.removeItem(STORAGE_KEYS.lastModel);
     }
   }, []);
 
@@ -378,24 +384,26 @@ const ClientWrapper = () => {
   );
 
   const handleLoadSample = useCallback(() => {
-    releaseLocalUrls();
+    // Don't revoke blob URLs immediately - let them be cleaned up naturally
+    // or when a new local file is imported
     setModelStats(null);
     setErrorMessage(null);
     setLoadingProgress(0);
     setModel(DEFAULT_MODEL);
     appendEvent("加载示例模型指令已触发");
-  }, [appendEvent, releaseLocalUrls, setModel]);
+  }, [appendEvent, setModel]);
 
   const handleSelectSample = useCallback(
     (item: SampleModel) => {
-      releaseLocalUrls();
+      // Don't revoke blob URLs when switching to samples
+      // Let them be cleaned up naturally to avoid race conditions
       setModel({ url: item.url, name: item.name });
       setModelStats(null);
       setErrorMessage(null);
       setLoadingProgress(0);
       appendEvent(`选择示例模型：${item.name}`);
     },
-    [appendEvent, releaseLocalUrls, setModel],
+    [appendEvent, setModel],
   );
 
   const handleImportFiles = useCallback(
@@ -416,7 +424,15 @@ const ClientWrapper = () => {
         return;
       }
 
-      releaseLocalUrls();
+      // Only revoke previous blob URLs if they exist, and with a generous delay
+      // to ensure all textures have finished loading
+      const previousUrls = localUrlsRef.current;
+      if (previousUrls.length > 0) {
+        setTimeout(() => {
+          previousUrls.forEach(url => URL.revokeObjectURL(url));
+          console.log(`[ClientWrapper] Revoked ${previousUrls.length} old blob URLs`);
+        }, 5000); // 5 second delay to be extra safe
+      }
 
       const fileMap: Record<string, string> = {};
       const localUrls: string[] = [];
@@ -438,7 +454,7 @@ const ClientWrapper = () => {
       });
       appendEvent(`导入本地模型：${mainFile.name}`);
     },
-    [appendEvent, releaseLocalUrls, setModel],
+    [appendEvent, setModel],
   );
 
   const availableTags = useMemo(() => {
@@ -595,8 +611,8 @@ const ClientWrapper = () => {
           </div>
         </header>
 
-        {/* Center/Bottom: Controls Overlay (If any specific 3D controls need to be center) */}
-        <div className="pointer-events-auto self-center mb-4 lg:mb-8 animate-slide-up w-auto max-w-[90vw]">
+        {/* Center/Bottom: Controls Overlay */}
+        <div className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2 animate-slide-up w-auto max-w-[90vw]">
           <div className="glass rounded-full p-1.5 shadow-2xl backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10 transition-all duration-300 hover:shadow-3xl hover:bg-[var(--panel)]/90">
             <Toolbar
               mode={mode}
@@ -610,7 +626,11 @@ const ClientWrapper = () => {
               activeAnimationIndex={activeAnimationIndex}
               animationLoop={animationLoop}
               animationSpeed={animationSpeed}
-              onLoadSample={handleLoadSample}
+              onLoadSample={() => {
+                setMaterials([]);
+                setMaterialInspectorOpen(false);
+                setModel(null);
+              }}
               onImportFiles={handleImportFiles}
               onExport={handleExport}
               onToggleTheme={handleToggleTheme}
@@ -619,10 +639,30 @@ const ClientWrapper = () => {
               onAnimationSelect={handleAnimationSelect}
               onAnimationLoopChange={handleAnimationLoopChange}
               onAnimationSpeedChange={handleAnimationSpeedChange}
+              onToggleMaterialInspector={() => {
+                if (!materialInspectorOpen && viewerRef.current) {
+                  setMaterials(viewerRef.current.getMaterials());
+                }
+                setMaterialInspectorOpen(prev => !prev);
+              }}
             />
           </div>
         </div>
       </div>
+
+      {/* Material Inspector */}
+      <MaterialInspector
+        visible={materialInspectorOpen}
+        materials={materials}
+        onClose={() => setMaterialInspectorOpen(false)}
+        onUpdate={(uuid, key, value) => {
+          viewerRef.current?.updateMaterial(uuid, key, value);
+          setMaterials(prev => prev.map(m =>
+            m.uuid === uuid ? { ...m, [key]: value } : m
+          ));
+        }}
+        onExport={() => handleExport("glb")}
+      />
 
       {/* 3. Slide-over Sidebar (Gallery & Info) */}
       <div className={`absolute top-0 right-0 h-full w-full sm:w-[360px] bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl shadow-2xl z-20 transform transition-transform duration-300 ease-spring ${showSidebar ? 'translate-x-0' : 'translate-x-full'}`}>
@@ -686,7 +726,8 @@ const ClientWrapper = () => {
           </div>
         </div>
       </div>
-
+      {/* 4. Onboarding Overlay */}
+      <OnboardingOverlay />
     </div>
   );
 };

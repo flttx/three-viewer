@@ -12,7 +12,7 @@ import {
 } from "react";
 import type { RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Grid, OrbitControls } from "@react-three/drei";
+import { ContactShadows, Grid, OrbitControls, PerspectiveCamera as DreiPerspectiveCamera } from "@react-three/drei";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader";
@@ -37,16 +37,16 @@ import {
   Mesh,
   Object3D,
   PMREMGenerator,
-  PerspectiveCamera,
+  PerspectiveCamera as PerspectiveCameraImpl,
   Sphere,
   Texture,
   Vector3,
   WebGLCubeRenderTarget,
   WebGLRenderer,
+  MeshStandardMaterial,
 } from "three";
 import { LightProbeGenerator } from "three/examples/jsm/lights/LightProbeGenerator";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment";
-import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 import {
   AnimationClipInfo,
@@ -57,12 +57,16 @@ import {
   ThemeOption,
 } from "@/types";
 
-Cache.enabled = true;
+Cache.enabled = false;
+
+import { MaterialInfo } from "@/lib/materialUtils";
 
 export interface ViewerCanvasHandle {
   exportModel: (
     format: "glb" | "gltf",
   ) => Promise<{ blob: Blob; filename: string }>;
+  getMaterials: () => MaterialInfo[];
+  updateMaterial: (uuid: string, key: string, value: any) => void;
 }
 
 interface ViewerCanvasProps {
@@ -175,7 +179,7 @@ const AutoFrame = ({
   controlsRef,
 }: {
   target: Object3D | null;
-  controlsRef: RefObject<OrbitControlsImpl | null>;
+  controlsRef: RefObject<any | null>;
 }) => {
   const { camera } = useThree();
 
@@ -187,7 +191,7 @@ const AutoFrame = ({
     const size = box.getSize(new Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
 
-    const perspective = camera as PerspectiveCamera;
+    const perspective = camera as PerspectiveCameraImpl;
     const fov = perspective.fov || 50;
     const distance = maxDim / (2 * Math.tan((fov * Math.PI) / 360));
     const offset = new Vector3(1, 1, 1)
@@ -251,7 +255,7 @@ const ViewerCanvas = memo(
       const lastSceneRef = useRef<Object3D | null>(null);
       const lastRenderRef = useRef<Object3D | null>(null);
       const lastNameRef = useRef<string>("示例模型");
-      const controlsRef = useRef<OrbitControlsImpl | null>(null);
+      const controlsRef = useRef<any>(null);
       const lodRef = useRef<LOD | null>(null);
       const progressRef = useRef(0);
       const dracoRef = useRef<DRACOLoader | null>(null);
@@ -462,6 +466,12 @@ const ViewerCanvas = memo(
           if (!lodUrl) return;
 
           const manager = new LoadingManager();
+
+          // Suppress errors for missing LOD files
+          manager.onError = () => {
+            console.log(`[ViewerCanvas] LOD file not found (expected): ${lodUrl}`);
+          };
+
           const loader = createLoader(manager);
           loader.load(
             lodUrl,
@@ -657,7 +667,12 @@ const ViewerCanvas = memo(
           setProgressState(next, loading);
         };
 
+        // Ensure global cache is clear and disabled to avoid stale blob URL issues
+        Cache.enabled = false;
+        Cache.clear();
+
         if (!model?.url) {
+          console.log("[ViewerCanvas] No model URL provided, cleaning up.");
           disposeObject(lastRenderRef.current ?? lastSceneRef.current);
           lastRenderRef.current = null;
           setObject(null);
@@ -669,6 +684,11 @@ const ViewerCanvas = memo(
           setProgressState(0, false);
           return;
         }
+
+        console.log(`[ViewerCanvas] Starting load for model: ${model.name}`, {
+          url: model.url.startsWith('blob:') ? 'blob:...' : model.url,
+          hasFileMap: !!model.fileMap
+        });
 
         if (!glReady || !glRef.current) return;
 
@@ -694,15 +714,25 @@ const ViewerCanvas = memo(
         const localFileMap = model.fileMap;
         const resolveLocalUrl = (resourceUrl: string) => {
           if (!localFileMap) return resourceUrl;
+          if (resourceUrl.startsWith("blob:") || resourceUrl.startsWith("data:")) {
+            console.log(`[ViewerCanvas] Direct blob/data URL: ${resourceUrl.substring(0, 50)}...`);
+            return resourceUrl;
+          }
           const stripped = resourceUrl.split(/[?#]/)[0] || resourceUrl;
           const decoded = decodeURIComponent(stripped);
           const basename = decoded.split("/").pop() || decoded;
-          return (
+          const resolved =
             localFileMap[decoded] ||
             localFileMap[basename] ||
             localFileMap[basename.toLowerCase()] ||
-            resourceUrl
-          );
+            localFileMap[stripped.toLowerCase()] ||
+            resourceUrl;
+
+          if (resolved !== resourceUrl) {
+            console.log(`[ViewerCanvas] Resolved ${basename} → ${resolved.startsWith('blob:') ? 'blob:...' : resolved}`);
+          }
+
+          return resolved;
         };
         const shouldSkipKtx2 = (() => {
           if (!fallbackUrl) return false;
@@ -736,8 +766,31 @@ const ViewerCanvas = memo(
           };
 
           manager.onError = (itemUrl) => {
-            if (cancelled || loadId !== loadIdRef.current) return;
-            if (allowFallback && fallbackUrl && itemUrl.startsWith("blob:")) {
+            const isCancelled = cancelled || loadId !== loadIdRef.current;
+            const isBlob = itemUrl.startsWith('blob:');
+            const errorContext = {
+              url: itemUrl,
+              cancelled,
+              currentLoadId: loadIdRef.current,
+              thisLoadId: loadId,
+              isStale: loadId !== loadIdRef.current
+            };
+
+            // Only log as error if this is an active, non-cancelled load
+            if (isCancelled) {
+              console.log(`[ViewerCanvas] Ignoring error from cancelled/stale load:`, errorContext);
+              return;
+            }
+
+            // Blob texture failures are treated as warnings (model can still render without textures)
+            if (isBlob) {
+              console.warn(`[ViewerCanvas] Texture failed to load (model will render without it):`, errorContext);
+            } else {
+              console.error(`[ViewerCanvas] Failed to load resource:`, errorContext);
+            }
+
+            if (allowFallback && fallbackUrl && isBlob) {
+              console.warn(`[ViewerCanvas] Blob texture failed, will try fallback URL`);
               textureFailed = true;
             }
           };
@@ -977,40 +1030,68 @@ const ViewerCanvas = memo(
         ref,
         () => ({
           async exportModel(format: "glb" | "gltf") {
-            if (!lastSceneRef.current) {
+            const target = object ?? lastSceneRef.current;
+            if (!target) {
               throw new Error("暂无可导出的模型");
             }
 
+            // Ensure material changes are respected during export
+            target.traverse((child) => {
+              if (child instanceof Mesh && child.material) {
+                const mats = Array.isArray(child.material)
+                  ? child.material
+                  : [child.material];
+                mats.forEach((m) => {
+                  if (m instanceof MeshStandardMaterial) {
+                    m.needsUpdate = true;
+                  }
+                });
+              }
+            });
+
             const exporter = new GLTFExporter();
-            const target = lastSceneRef.current;
             const fileName = `${lastNameRef.current || "scene"}.${format}`;
 
-            return new Promise<{ blob: Blob; filename: string }>((resolve, reject) => {
-              exporter.parse(
-                target,
-                (result: ArrayBuffer | Record<string, unknown>) => {
-                  const blob =
-                    format === "glb"
-                      ? new Blob([result as ArrayBuffer], {
-                        type: "model/gltf-binary",
-                      })
-                      : new Blob([JSON.stringify(result, null, 2)], {
-                        type: "model/gltf+json",
+            return new Promise<{ blob: Blob; filename: string }>(
+              (resolve, reject) => {
+                exporter.parse(
+                  target,
+                  (result) => {
+                    let blob: Blob;
+                    if (result instanceof ArrayBuffer) {
+                      blob = new Blob([result], { type: "model/gltf-binary" });
+                    } else {
+                      blob = new Blob([JSON.stringify(result)], {
+                        type: "application/json",
                       });
+                    }
 
-                  onExported?.(format, blob.size);
-                  downloadBlob(blob, fileName);
-                  resolve({ blob, filename: fileName });
-                },
-                (error: unknown) => {
-                  reject(error);
-                },
-                { binary: format === "glb" },
-              );
-            });
+                    onExported?.(format, blob.size);
+                    downloadBlob(blob, fileName);
+                    resolve({ blob, filename: fileName });
+                  },
+                  (error) => {
+                    reject(error);
+                  },
+                  { binary: format === "glb" },
+                );
+              },
+            );
+          },
+          getMaterials: () => {
+            const target = object ?? lastSceneRef.current;
+            if (!target) return [];
+            const { extractMaterials } = require("@/lib/materialUtils");
+            return extractMaterials(target);
+          },
+          updateMaterial: (uuid: string, key: string, value: any) => {
+            const target = object ?? lastSceneRef.current;
+            if (!target) return;
+            const { updateMaterialProperty } = require("@/lib/materialUtils");
+            updateMaterialProperty(target, uuid, key, value);
           },
         }),
-        [onExported],
+        [object, onExported],
       );
 
       return (
@@ -1050,7 +1131,7 @@ const ViewerCanvas = memo(
             />
             {showAccentLight && (
               <>
-                <perspectiveCamera makeDefault position={[5, 1, 5]} fov={50} />
+                <DreiPerspectiveCamera makeDefault position={[5, 1, 5]} fov={50} />
                 {/* Main Key Light */}
                 <directionalLight
                   castShadow

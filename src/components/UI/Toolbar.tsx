@@ -32,6 +32,7 @@ interface ToolbarProps {
   onAnimationSelect: (index: number) => void;
   onAnimationLoopChange: (mode: AnimationLoopMode) => void;
   onAnimationSpeedChange: (speed: number) => void;
+  onToggleMaterialInspector?: () => void;
 }
 
 const Toolbar = ({
@@ -55,6 +56,7 @@ const Toolbar = ({
   onAnimationSelect,
   onAnimationLoopChange,
   onAnimationSpeedChange,
+  onToggleMaterialInspector,
 }: ToolbarProps) => {
   const qualityLabelMap: Record<QualityLevel, string> = {
     low: "低",
@@ -176,6 +178,14 @@ const Toolbar = ({
             )}
           </button>
 
+          {/* Material Logic */}
+          <button
+            onClick={onToggleMaterialInspector}
+            className="h-9 w-9 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/20 hover:text-purple-500 hover:shadow-md transition-all active:scale-95 glow-hover"
+            title="Material Inspector"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 2.5-2 4-2" /><line x1="9" x2="9.01" y1="9" y2="9" /><line x1="15" x2="15.01" y1="9" y2="9" /></svg>
+          </button>
         </div>
       </div>
     </div>
