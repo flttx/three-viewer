@@ -67,19 +67,6 @@ const getFormatFromUrl = (url?: string | null) => {
   return "未知";
 };
 
-const getComplexityStyle = (value: string) => {
-  if (value === "高复杂" || value === "复杂") {
-    return "bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-100";
-  }
-  if (value === "中等") {
-    return "bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100";
-  }
-  if (value === "轻量") {
-    return "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100";
-  }
-  return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200";
-};
-
 const ModelInfoCard = ({
   sample,
   model,
@@ -139,33 +126,27 @@ const ModelInfoCard = ({
   ];
 
   const items = isCompact ? compactItems : fullItems;
-  const complexityStyle = getComplexityStyle(complexity);
 
   return (
     <div
-      className={`rounded-2xl border border-slate-200 bg-white/80 ${
-        isCompact ? "px-4 py-3" : "p-4"
-      } shadow-sm ring-1 ring-white/50 backdrop-blur dark:border-slate-800 dark:bg-slate-900/60 dark:ring-slate-800/60`}
+      className={
+        isCompact
+          ? "w-full"
+          : "rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60"
+      }
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100" suppressHydrationWarning>
             {title}
           </h3>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-300" suppressHydrationWarning>
             {summary}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`rounded-full px-2 py-1 text-[11px] font-semibold ${complexityStyle}`}
-          >
-            复杂度：{complexity}
-          </span>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200">
-            {formatLabel}
-          </span>
-        </div>
+        <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200" suppressHydrationWarning>
+          {formatLabel}
+        </span>
       </div>
 
       {tags.length > 0 && (
@@ -182,27 +163,27 @@ const ModelInfoCard = ({
       )}
 
       <div
-        className={`mt-4 grid ${
-          isCompact ? "grid-cols-2 gap-3" : "grid-cols-3 gap-3"
-        }`}
+        className={`mt-4 grid ${isCompact ? "grid-cols-2 gap-2" : "grid-cols-3 gap-3"
+          }`}
       >
         {items.map((item) => (
           <div
             key={item.label}
-            className="rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white px-3 py-2 text-xs text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:from-slate-800/70 dark:to-slate-900/70 dark:text-slate-200"
+            className={`rounded-xl px-3 py-2 text-xs text-slate-600 dark:text-slate-200 ${isCompact
+              ? "bg-black/5 dark:bg-white/5"
+              : "bg-slate-100/70 dark:bg-slate-800/70"
+              }`}
           >
             <div className="text-[11px] text-slate-400 dark:text-slate-400">
               {item.label}
             </div>
-            <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-              {item.value}
-            </div>
+            <div className="font-semibold">{item.value}</div>
           </div>
         ))}
       </div>
 
       {errorMessage && (
-        <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 shadow-sm dark:border-rose-500/40 dark:bg-rose-500/20 dark:text-rose-100">
+        <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:bg-rose-500/20 dark:text-rose-100">
           加载异常：{errorMessage}
         </div>
       )}
