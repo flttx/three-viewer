@@ -530,233 +530,256 @@ const ClientWrapper = () => {
   const modeLabel = mode === "embedded" ? "嵌入" : "独立";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-white text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="relative min-h-screen overflow-hidden text-slate-900 dark:text-slate-100">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(99,102,241,0.12),transparent_32%),radial-gradient(circle_at_86%_14%,rgba(14,165,233,0.12),transparent_34%),radial-gradient(circle_at_20%_88%,rgba(16,185,129,0.12),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/60 via-white/40 to-white/10 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-950" />
       {showChrome && (
         <StandaloneHeader theme={theme} onToggleTheme={handleToggleTheme} />
       )}
-      <main className="mx-auto flex max-w-7xl flex-col gap-4 px-6 pb-10 pt-6">
-        <EmbeddedHeader mode={mode} />
-        <div
-          className={`grid gap-4 ${showChrome ? "lg:grid-cols-[320px_1fr]" : ""}`}
-        >
-          {showChrome && (
-            <aside className="space-y-4 lg:sticky lg:top-6">
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  运行与通信
-                </h3>
-                <div className="mt-3 grid gap-3 text-xs text-slate-600 dark:text-slate-300">
-                  <div>
-                    <p className="text-[11px] font-semibold text-slate-400">
-                      运行环境
-                    </p>
-                    <ul className="mt-2 space-y-1">
-                      <li>模式：{modeLabel}</li>
-                      <li>主题：{theme === "dark" ? "深色" : "浅色"}</li>
-                      <li>allowedOrigins：{allowedOriginsLabel}</li>
-                    </ul>
+      <main className="relative mx-auto max-w-7xl px-6 pb-12 pt-8">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 p-5 shadow-2xl ring-1 ring-white/70 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/60 dark:ring-slate-800/60">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(99,102,241,0.08),transparent_30%),radial-gradient(circle_at_82%_0%,rgba(34,211,238,0.08),transparent_28%),radial-gradient(circle_at_50%_90%,rgba(16,185,129,0.06),transparent_30%)]" />
+          <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-indigo-200 to-transparent opacity-70 dark:via-indigo-500/30" />
+          <div className="relative flex flex-col gap-5">
+            <EmbeddedHeader mode={mode} />
+            <div
+              className={`grid gap-5 ${showChrome ? "lg:grid-cols-[320px_1fr]" : ""}`}
+            >
+              {showChrome && (
+                <aside className="space-y-4 lg:sticky lg:top-10">
+                  <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-4 shadow-lg ring-1 ring-white/60 backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70 dark:ring-slate-800/60">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        运行与通信
+                      </h3>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                        同步中
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-3 text-xs text-slate-600 dark:text-slate-300">
+                      <div>
+                        <p className="text-[11px] font-semibold text-slate-400">
+                          运行环境
+                        </p>
+                        <ul className="mt-2 space-y-1">
+                          <li>模式：{modeLabel}</li>
+                          <li>主题：{theme === "dark" ? "深色" : "浅色"}</li>
+                          <li>allowedOrigins：{allowedOriginsLabel}</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-slate-400">
+                          消息流
+                        </p>
+                        <ul className="mt-2 space-y-1">
+                          <li>URL：model / theme / embedded</li>
+                          <li>父页：load_model / set_theme / export_requested</li>
+                          <li>回传：model_loaded / export_complete / error</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[11px] font-semibold text-slate-400">
-                      消息流
-                    </p>
-                    <ul className="mt-2 space-y-1">
-                      <li>URL：model / theme / embedded</li>
-                      <li>父页：load_model / set_theme / export_requested</li>
-                      <li>回传：model_loaded / export_complete / error</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    示例模型
-                  </h3>
-                  <span className="text-[11px] text-slate-400">
-                    {filteredSamples.length} 个
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={clearTags}
-                    className={`rounded-full border px-2 py-0.5 font-medium transition ${
-                      activeTags.length === 0
-                        ? "border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-100"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
-                    }`}
-                  >
-                    全部
-                  </button>
-                  {availableTags.map((tag) => {
-                    const isActive = activeTags.includes(tag);
-                    return (
+                  <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-4 shadow-lg ring-1 ring-white/60 backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70 dark:ring-slate-800/60">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        示例模型
+                      </h3>
+                      <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100">
+                        {filteredSamples.length} 个
+                      </span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
                       <button
-                        key={tag}
                         type="button"
-                        onClick={() => toggleTag(tag)}
+                        onClick={clearTags}
                         className={`rounded-full border px-2 py-0.5 font-medium transition ${
-                          isActive
-                            ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-100"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
+                          activeTags.length === 0
+                            ? "border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-100"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
                         }`}
                       >
-                        {tag}
+                        全部
                       </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3">
-                  <ModelGallery
-                    items={filteredSamples}
-                    activeUrl={model?.url}
-                    layout="row"
-                    onSelect={handleSelectSample}
-                  />
-                </div>
-                <div className="mt-3">
-                  <ModelInfoCard
-                    sample={activeSample}
-                    model={model}
-                    stats={modelStats}
-                    errorMessage={errorMessage}
-                    variant="compact"
-                  />
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  最新事件
-                </h3>
-                <div className="mt-2 max-h-32 space-y-2 overflow-y-auto text-xs text-slate-600 dark:text-slate-200">
-                  {events.length === 0 && <p>暂无事件</p>}
-                  {events.map((item, index) => (
-                    <p
-                      key={`${item}-${index}`}
-                      className="rounded-lg bg-slate-100 px-3 py-1.5 dark:bg-slate-800/70"
-                    >
-                      {item}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            </aside>
-          )}
-          <section className="flex min-h-[520px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-xl backdrop-blur dark:border-slate-800 dark:bg-slate-900/70 lg:min-h-[calc(100vh-220px)]">
-            <Toolbar
-              mode={mode}
-              theme={theme}
-              qualityMode={qualityMode}
-              resolvedQuality={resolvedQuality}
-              modelName={model?.name}
-              animationAvailable={animationAvailable}
-              animationPlaying={animationPlaying}
-              animationClips={animationClips}
-              activeAnimationIndex={activeAnimationIndex}
-                animationLoop={animationLoop}
-                animationSpeed={animationSpeed}
-                onLoadSample={handleLoadSample}
-                onImportFiles={handleImportFiles}
-                onExport={handleExport}
-              onToggleTheme={handleToggleTheme}
-              onQualityChange={handleQualityChange}
-              onToggleAnimation={handleToggleAnimation}
-              onAnimationSelect={handleAnimationSelect}
-              onAnimationLoopChange={handleAnimationLoopChange}
-              onAnimationSpeedChange={handleAnimationSpeedChange}
-            />
-            {!showChrome && (
-              <div className="border-b border-slate-200/80 bg-white/70 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
-                <div className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-300">
-                  示例模型
-                </div>
-                <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-                  <button
-                    type="button"
-                    onClick={clearTags}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                      activeTags.length === 0
-                        ? "border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-100"
-                        : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
-                    }`}
-                  >
-                    全部
-                  </button>
-                  {availableTags.map((tag) => {
-                    const isActive = activeTags.includes(tag);
-                    return (
+                      {availableTags.map((tag) => {
+                        const isActive = activeTags.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={`rounded-full border px-2 py-0.5 font-medium transition ${
+                              isActive
+                                ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-100"
+                                : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3">
+                      <ModelGallery
+                        items={filteredSamples}
+                        activeUrl={model?.url}
+                        layout="row"
+                        onSelect={handleSelectSample}
+                      />
+                    </div>
+                    <div className="mt-3">
+                      <ModelInfoCard
+                        sample={activeSample}
+                        model={model}
+                        stats={modelStats}
+                        errorMessage={errorMessage}
+                        variant="compact"
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-4 shadow-lg ring-1 ring-white/60 backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70 dark:ring-slate-800/60">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        最新事件
+                      </h3>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                        {events.length} 条
+                      </span>
+                    </div>
+                    <div className="mt-2 max-h-32 space-y-2 overflow-y-auto pr-1 text-xs text-slate-600 dark:text-slate-200">
+                      {events.length === 0 && <p className="text-slate-400">暂无事件</p>}
+                      {events.map((item, index) => (
+                        <p
+                          key={`${item}-${index}`}
+                          className="rounded-lg bg-slate-100 px-3 py-1.5 shadow-sm dark:bg-slate-800/70"
+                        >
+                          {item}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </aside>
+              )}
+              <section className="flex min-h-[520px] flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 shadow-2xl ring-1 ring-white/70 backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70 dark:ring-slate-800/60 lg:min-h-[calc(100vh-220px)]">
+                <Toolbar
+                  mode={mode}
+                  theme={theme}
+                  qualityMode={qualityMode}
+                  resolvedQuality={resolvedQuality}
+                  modelName={model?.name}
+                  animationAvailable={animationAvailable}
+                  animationPlaying={animationPlaying}
+                  animationClips={animationClips}
+                  activeAnimationIndex={activeAnimationIndex}
+                  animationLoop={animationLoop}
+                  animationSpeed={animationSpeed}
+                  onLoadSample={handleLoadSample}
+                  onImportFiles={handleImportFiles}
+                  onExport={handleExport}
+                  onToggleTheme={handleToggleTheme}
+                  onQualityChange={handleQualityChange}
+                  onToggleAnimation={handleToggleAnimation}
+                  onAnimationSelect={handleAnimationSelect}
+                  onAnimationLoopChange={handleAnimationLoopChange}
+                  onAnimationSpeedChange={handleAnimationSpeedChange}
+                />
+                {!showChrome && (
+                  <div className="border-b border-slate-200/80 bg-white/70 px-4 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/60">
+                    <div className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-300">
+                      示例模型
+                    </div>
+                    <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
                       <button
-                        key={tag}
                         type="button"
-                        onClick={() => toggleTag(tag)}
+                        onClick={clearTags}
                         className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                          isActive
-                            ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-100"
+                          activeTags.length === 0
+                            ? "border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-100"
                             : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
                         }`}
                       >
-                        {tag}
+                        全部
                       </button>
-                    );
-                  })}
-                </div>
-                <ModelGallery
-                  items={filteredSamples}
-                  activeUrl={model?.url}
-                  layout="row"
-                  onSelect={handleSelectSample}
-                />
-                <div className="mt-4">
-                  <ModelInfoCard
-                    sample={activeSample}
+                      {availableTags.map((tag) => {
+                        const isActive = activeTags.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                              isActive
+                                ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-100"
+                                : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <ModelGallery
+                      items={filteredSamples}
+                      activeUrl={model?.url}
+                      layout="row"
+                      onSelect={handleSelectSample}
+                    />
+                    <div className="mt-4">
+                      <ModelInfoCard
+                        sample={activeSample}
+                        model={model}
+                        stats={modelStats}
+                        errorMessage={errorMessage}
+                        variant="compact"
+                      />
+                    </div>
+                  </div>
+                )}
+                <Scene>
+                  <ViewerCanvas
+                    ref={viewerRef}
+                    theme={theme}
+                    quality={resolvedQuality}
                     model={model}
-                    stats={modelStats}
-                    errorMessage={errorMessage}
-                    variant="compact"
+                    playAnimations={animationPlaying}
+                    activeAnimationIndex={activeAnimationIndex}
+                    animationLoop={animationLoop}
+                    animationSpeed={animationSpeed}
+                    onLoaded={handleModelLoaded}
+                    onError={handleLoadError}
+                    onStats={handleStats}
+                    onAnimationList={handleAnimationList}
+                    onExported={handleExported}
+                    onLoadingState={handleLoadingState}
                   />
-                </div>
-              </div>
+                  <div className="px-6 py-4 text-sm text-slate-100 lg:absolute lg:bottom-4 lg:left-4 lg:w-[340px] lg:rounded-2xl lg:bg-slate-900/60 lg:p-4 lg:shadow-lg lg:ring-1 lg:ring-white/10 lg:backdrop-blur">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold">
+                        {model?.name || "示例模型"} 状态
+                      </p>
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-slate-100">
+                        {modeLabel} · {theme === "dark" ? "深色" : "浅色"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-200">
+                      加载进度：{loadingProgress}%
+                      {errorMessage && (
+                        <span className="ml-2 text-rose-200">
+                          错误：{errorMessage}
+                        </span>
+                      )}
+                    </p>
+                    <Controls />
+                  </div>
+                </Scene>
+              </section>
+            </div>
+            {showChrome && (
+              <footer className="mt-2 border-t border-slate-200/60 pt-3 text-xs text-slate-500 dark:border-slate-800/70 dark:text-slate-400">
+                SceneHub 3D Viewer — 支持独立访问与 iframe 嵌入，已接入 Three.js 渲染、材质编辑与导入导出链路。
+              </footer>
             )}
-            <Scene>
-              <ViewerCanvas
-                ref={viewerRef}
-                theme={theme}
-                quality={resolvedQuality}
-                model={model}
-                playAnimations={animationPlaying}
-                activeAnimationIndex={activeAnimationIndex}
-                animationLoop={animationLoop}
-                animationSpeed={animationSpeed}
-                onLoaded={handleModelLoaded}
-                onError={handleLoadError}
-                onStats={handleStats}
-                onAnimationList={handleAnimationList}
-                onExported={handleExported}
-                onLoadingState={handleLoadingState}
-              />
-              <div className="px-6 py-4 text-sm text-slate-100 lg:absolute lg:bottom-4 lg:left-4 lg:w-[320px] lg:rounded-2xl lg:bg-slate-900/50 lg:p-4 lg:shadow-lg lg:backdrop-blur">
-                <p className="font-semibold">
-                  {model?.name || "示例模型"} 状态
-                </p>
-                <p className="mt-1 text-xs text-slate-200">
-                  加载进度：{loadingProgress}%
-                  {errorMessage && (
-                    <span className="ml-2 text-rose-200">
-                      错误：{errorMessage}
-                    </span>
-                  )}
-                </p>
-                <Controls />
-              </div>
-            </Scene>
-          </section>
+          </div>
         </div>
-        {showChrome && (
-          <footer className="mt-6 text-xs text-slate-500 dark:text-slate-400">
-            SceneHub 3D Viewer • 支持独立访问与 iframe 嵌入，已接入 Three.js 渲染、材质编辑与导入导出链路。
-          </footer>
-        )}
       </main>
     </div>
   );
